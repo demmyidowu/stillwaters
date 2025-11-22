@@ -14,6 +14,9 @@
     "@react-navigation/bottom-tabs": "^7.8.6",
     "@react-navigation/native": "^7.1.21",
     "@react-navigation/native-stack": "^7.6.4",
+    "@react-navigation/stack": "^7.6.7",
+    "@rneui/base": "^4.0.0-rc.8",
+    "@rneui/themed": "^4.0.0-rc.8",
     "@supabase/supabase-js": "^2.84.0",
     "axios": "^1.13.2",
     "expo": "~54.0.25",
@@ -23,16 +26,12 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-dotenv": "^3.4.11",
-    "react-native-elements": "^3.4.3",
+    "react-native-gesture-handler": "^2.29.1",
     "react-native-safe-area-context": "^5.6.2",
-    "react-native-screens": "^4.18.0",
     "react-native-url-polyfill": "^3.0.0",
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.21.0",
     "zustand": "^5.0.8"
-  },
-  "jest": {
-    "preset": "jest-expo"
   },
   "private": true,
   "devDependencies": {

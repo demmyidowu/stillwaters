@@ -1,81 +1,65 @@
 import React, { useEffect } from 'react';
 import { View, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
-import { Text, Button, Card, Icon } from 'react-native-elements';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text, Button, Card, Icon, useTheme } from '@rneui/themed';
 import { commonStyles, colors, spacing, typography } from '../utils/theme';
 import useDevotionalStore from '../store/useDevotionalStore';
 
 /**
  * Devotional Screen (Daily Streams)
  * 
- * Displays the daily devotional content including scripture, reflection, and prayer.
- * Fetches data from Supabase based on the current date.
+ * Displays the daily devotional content.
+ * Includes scripture, reflection, and prayer.
  */
 const DevotionalScreen = ({ navigation }) => {
-    const { todayDevotional, streak, fetchTodayDevotional, isLoading } = useDevotionalStore();
+    const { todayDevotional, fetchTodayDevotional, isLoading, streak } = useDevotionalStore();
+    const { theme } = useTheme();
+    const insets = useSafeAreaInsets();
 
-    // Fetch devotional on mount
     useEffect(() => {
         fetchTodayDevotional();
     }, []);
 
-    // Loading State
-    if (isLoading) {
+    if (isLoading || !todayDevotional) {
         return (
-            <View style={[styles.container, styles.center]}>
-                <ActivityIndicator size="large" color={colors.primary.blue} />
+            <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
             </View>
         );
     }
 
-    // Empty State (No devotional found for today)
-    if (!todayDevotional) {
-        return (
-            <View style={[styles.container, styles.center]}>
-                <Text style={styles.emptyText}>No devotional for today.</Text>
-                <Button title="Check again" onPress={fetchTodayDevotional} type="clear" />
-            </View>
-        );
-    }
+    const today = new Date().toLocaleDateString(undefined, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
 
     return (
-        <ScrollView style={styles.container}>
-            {/* Header with Streak and Date */}
-            <View style={styles.header}>
-                <View style={styles.streakContainer}>
-                    <Icon name="flame" type="ionicon" color={colors.semantic.warning} size={20} />
-                    <Text style={styles.streakText}>{streak} Day Streak</Text>
-                </View>
-                <Text style={styles.date}>{todayDevotional.date}</Text>
+        <ScrollView style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
+            {/* Header / Date */}
+            <View style={[styles.header, { backgroundColor: theme.colors.white }]}>
+                <Text h4 style={[styles.title, { color: theme.colors.primary }]}>Daily Streams</Text>
+                <Text style={[styles.date, { color: theme.colors.grey1 }]}>{today}</Text>
             </View>
 
-            {/* Main Content */}
-            <View style={styles.content}>
-                <Text h3 style={styles.title}>{todayDevotional.title}</Text>
+            {/* Devotional Content */}
+            <View style={[styles.contentContainer, { backgroundColor: theme.colors.white, shadowColor: theme.colors.black }]}>
+                <Text h3 style={[styles.devotionalTitle, { color: theme.colors.black }]}>{todayDevotional.title}</Text>
 
-                {/* Scripture Card */}
-                <Card containerStyle={styles.scriptureCard}>
-                    <Text style={styles.scriptureText}>"{todayDevotional.scripture.text}"</Text>
-                    <Text style={styles.scriptureReference}>
-                        — {todayDevotional.scripture.reference} ({todayDevotional.scripture.translation})
+                <View style={[styles.scriptureContainer, { backgroundColor: theme.mode === 'dark' ? theme.colors.grey0 : theme.colors.grey5 }]}>
+                    <Text style={[styles.scriptureText, { color: theme.colors.grey2 }]}>"{todayDevotional.scripture.text}"</Text>
+                    <Text style={[styles.scriptureReference, { color: theme.colors.primary }]}>
+                        {todayDevotional.scripture.reference} ({todayDevotional.scripture.translation})
                     </Text>
-                </Card>
-
-                {/* Reflection Body */}
-                <Text style={styles.bodyText}>{todayDevotional.content}</Text>
-
-                {/* Prayer Section */}
-                <View style={styles.prayerContainer}>
-                    <Text style={styles.prayerLabel}>Today's Prayer</Text>
-                    <Text style={styles.prayerText}>{todayDevotional.prayer}</Text>
                 </View>
 
-                {/* Action Button */}
-                <Button
-                    title="Reflect in Journal"
-                    icon={<Icon name="create-outline" type="ionicon" color={colors.white} style={{ marginRight: 10 }} />}
-                    buttonStyle={styles.reflectButton}
-                    onPress={() => navigation.navigate('Reflection Pool')}
-                />
+                <Text style={[styles.bodyText, { color: theme.colors.black }]}>{todayDevotional.content}</Text>
+
+                <View style={[styles.divider, { backgroundColor: theme.colors.grey0 }]} />
+
+                <Text style={[styles.prayerTitle, { color: theme.colors.primary }]}>Prayer</Text>
+                <Text style={[styles.prayerText, { color: theme.colors.grey2 }]}>{todayDevotional.prayer}</Text>
             </View>
         </ScrollView>
     );
@@ -83,104 +67,79 @@ const DevotionalScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: {
-        ...commonStyles.container,
+        flex: 1,
     },
     header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: spacing.m,
-        backgroundColor: colors.white,
-    },
-    streakContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.secondary.light,
-        paddingHorizontal: spacing.s,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    streakText: {
-        marginLeft: 4,
-        fontWeight: typography.weights.bold,
-        color: colors.secondary.dark,
-        fontSize: typography.sizes.small,
-    },
-    date: {
-        color: colors.secondary.medium,
-        fontSize: typography.sizes.small,
-        fontWeight: typography.weights.bold,
-    },
-    content: {
         padding: spacing.l,
+        paddingBottom: spacing.m,
+        alignItems: 'center',
     },
     title: {
-        color: colors.primary.dark,
+        fontWeight: typography.weights.bold,
+        marginBottom: 4,
+    },
+    date: {
+        fontSize: typography.sizes.body,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    contentContainer: {
+        margin: spacing.m,
+        padding: spacing.l,
+        borderRadius: 16,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    devotionalTitle: {
         marginBottom: spacing.l,
         textAlign: 'center',
     },
-    scriptureCard: {
-        ...commonStyles.card,
-        backgroundColor: colors.primary.light,
-        borderColor: 'transparent',
+    scriptureContainer: {
+        padding: spacing.m,
+        borderRadius: 8,
         marginBottom: spacing.l,
-        marginHorizontal: 0,
+        borderLeftWidth: 4,
+        borderLeftColor: colors.primary.blue, // Keep brand color for accent
     },
     scriptureText: {
-        fontSize: typography.sizes.h3,
-        fontFamily: typography.scripture,
+        fontSize: typography.sizes.body,
         fontStyle: 'italic',
-        color: colors.primary.dark,
-        textAlign: 'center',
         marginBottom: spacing.s,
+        lineHeight: 24,
     },
     scriptureReference: {
-        textAlign: 'center',
+        fontSize: typography.sizes.small,
         fontWeight: typography.weights.bold,
-        color: colors.primary.blue,
+        textAlign: 'right',
     },
     bodyText: {
         fontSize: typography.sizes.body,
-        color: colors.secondary.dark,
         lineHeight: 26,
         marginBottom: spacing.l,
     },
-    prayerContainer: {
-        backgroundColor: colors.white,
-        padding: spacing.m,
-        borderRadius: 8,
-        borderLeftWidth: 4,
-        borderLeftColor: colors.accent,
-        marginBottom: spacing.xl,
+    divider: {
+        height: 1,
+        marginBottom: spacing.l,
     },
-    prayerLabel: {
-        color: colors.accent,
+    prayerTitle: {
+        fontSize: typography.sizes.h3,
         fontWeight: typography.weights.bold,
         marginBottom: spacing.s,
-        textTransform: 'uppercase',
-        fontSize: typography.sizes.small,
+        textAlign: 'center',
     },
     prayerText: {
         fontSize: typography.sizes.body,
         fontStyle: 'italic',
-        color: colors.secondary.dark,
+        textAlign: 'center',
+        lineHeight: 24,
     },
-    reflectButton: {
-        backgroundColor: colors.primary.blue,
-        borderRadius: 24,
-        paddingVertical: spacing.m,
-    },
-    center: {
+    loadingContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        flex: 1,
-    },
-    emptyText: {
-        fontSize: typography.sizes.body,
-        color: colors.secondary.medium,
-        marginBottom: spacing.m,
     },
 });
 
 export default DevotionalScreen;
-

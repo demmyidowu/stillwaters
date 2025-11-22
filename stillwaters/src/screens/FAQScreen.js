@@ -1,26 +1,9 @@
 import React, { useEffect } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Text, SearchBar, Icon } from 'react-native-elements';
-import { commonStyles, colors, spacing, typography } from '../utils/theme';
+import { View, FlatList, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text, SearchBar, Icon, ListItem, useTheme } from '@rneui/themed';
+import { typography, spacing } from '../utils/theme';
 import useFAQStore from '../store/useFAQStore';
-
-/**
- * FAQ Item Component
- * 
- * Renders a single FAQ item in the list.
- * Displays category and question text.
- */
-const FAQItem = ({ item, onPress }) => (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-        <View style={styles.itemContainer}>
-            <View style={styles.itemContent}>
-                <Text style={styles.category}>{item.category}</Text>
-                <Text style={styles.question}>{item.question}</Text>
-            </View>
-            <Icon name="chevron-forward" type="ionicon" color={colors.secondary.medium} />
-        </View>
-    </TouchableOpacity>
-);
 
 /**
  * FAQ Screen (The Well)
@@ -29,7 +12,9 @@ const FAQItem = ({ item, onPress }) => (
  * Fetches data from Supabase via the FAQ store.
  */
 const FAQScreen = ({ navigation }) => {
-    const { faqs, searchQuery, setSearchQuery, fetchFAQs, isLoading } = useFAQStore();
+    const { faqs, searchQuery, setSearchQuery, fetchFAQs } = useFAQStore();
+    const { theme } = useTheme();
+    const insets = useSafeAreaInsets();
 
     // Fetch FAQs on mount
     useEffect(() => {
@@ -43,11 +28,11 @@ const FAQScreen = ({ navigation }) => {
     );
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
             {/* Header */}
-            <View style={styles.header}>
-                <Text h4 style={styles.title}>The Well</Text>
-                <Text style={styles.subtitle}>Common questions, deep answers.</Text>
+            <View style={[styles.header, { backgroundColor: theme.colors.white }]}>
+                <Text h4 style={[styles.title, { color: theme.colors.black }]}>The Well</Text>
+                <Text style={[styles.subtitle, { color: theme.colors.grey1 }]}>Common questions, deep answers.</Text>
             </View>
 
             {/* Search Bar */}
@@ -56,10 +41,11 @@ const FAQScreen = ({ navigation }) => {
                 onChangeText={setSearchQuery}
                 value={searchQuery}
                 platform="default"
-                containerStyle={styles.searchContainer}
-                inputContainerStyle={styles.searchInputContainer}
-                inputStyle={styles.searchInput}
-                lightTheme
+                containerStyle={[styles.searchContainer, { backgroundColor: theme.colors.white }]}
+                inputContainerStyle={[styles.searchInputContainer, { backgroundColor: theme.colors.grey0 }]}
+                inputStyle={[styles.searchInput, { color: theme.colors.black }]}
+                placeholderTextColor={theme.colors.grey1}
+                lightTheme={theme.mode === 'light'}
                 round
             />
 
@@ -67,14 +53,22 @@ const FAQScreen = ({ navigation }) => {
             <FlatList
                 data={filteredFAQs}
                 renderItem={({ item }) => (
-                    <FAQItem
-                        item={item}
+                    <ListItem
+                        bottomDivider
                         onPress={() => navigation.navigate('FAQDetail', { faq: item })}
-                    />
+                        containerStyle={{ backgroundColor: theme.colors.white }}
+                    >
+                        <Icon name="help-circle-outline" type="ionicon" color={theme.colors.primary} />
+                        <ListItem.Content>
+                            <ListItem.Title style={[styles.title, { color: theme.colors.black }]}>{item.question}</ListItem.Title>
+                            <ListItem.Subtitle style={{ color: theme.colors.grey1 }} numberOfLines={1}>
+                                {item.answer.summary}
+                            </ListItem.Subtitle>
+                        </ListItem.Content>
+                        <ListItem.Chevron color={theme.colors.grey1} />
+                    </ListItem>
                 )}
                 keyExtractor={item => item.id}
-                contentContainerStyle={styles.listContent}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
             />
         </View>
     );
@@ -82,67 +76,30 @@ const FAQScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: {
-        ...commonStyles.container,
+        flex: 1,
     },
     header: {
         padding: spacing.l,
         paddingBottom: spacing.m,
-        backgroundColor: colors.white,
     },
     title: {
-        color: colors.primary.dark,
-        marginBottom: spacing.xs,
+        fontWeight: typography.weights.bold,
+        marginBottom: 4,
     },
     subtitle: {
-        color: colors.secondary.medium,
         fontSize: typography.sizes.body,
     },
     searchContainer: {
-        backgroundColor: colors.white,
         borderBottomColor: 'transparent',
         borderTopColor: 'transparent',
         paddingHorizontal: spacing.m,
         paddingBottom: spacing.m,
     },
     searchInputContainer: {
-        backgroundColor: colors.secondary.light,
+        // Background color handled by theme
     },
     searchInput: {
         fontSize: typography.sizes.body,
-    },
-    listContent: {
-        padding: spacing.m,
-    },
-    itemContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: spacing.m,
-        backgroundColor: colors.white,
-        borderRadius: 8,
-        marginBottom: spacing.s,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-    },
-    itemContent: {
-        flex: 1,
-        marginRight: spacing.m,
-    },
-    category: {
-        fontSize: typography.sizes.small,
-        color: colors.primary.blue,
-        fontWeight: typography.weights.bold,
-        marginBottom: 4,
-    },
-    question: {
-        fontSize: typography.sizes.body,
-        color: colors.secondary.dark,
-        fontWeight: typography.weights.medium,
-    },
-    separator: {
-        height: spacing.xs,
     },
 });
 

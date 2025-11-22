@@ -1,3 +1,5 @@
+import { createTheme } from '@rneui/themed';
+
 export const colors = {
   primary: {
     blue: '#5B9BD5',
@@ -20,8 +22,7 @@ export const colors = {
 };
 
 export const typography = {
-  // Note: Custom fonts need to be loaded in App.js
-  heading: 'System', // Fallback until fonts are loaded
+  heading: 'System',
   body: 'System',
   scripture: 'System',
   sizes: {
@@ -68,9 +69,44 @@ export const commonStyles = {
   },
 };
 
-export const theme = {
-  colors,
-  typography,
-  spacing,
-  commonStyles,
-};
+export const theme = createTheme({
+  lightColors: {
+    primary: colors.primary.blue,
+    secondary: colors.secondary.medium,
+    background: colors.secondary.light,
+    white: colors.white,
+    black: colors.black,
+    grey0: colors.secondary.light,
+    grey1: colors.secondary.medium,
+    grey2: colors.secondary.dark,
+    error: colors.semantic.error,
+    success: colors.semantic.success,
+    warning: colors.semantic.warning,
+  },
+  darkColors: {
+    primary: colors.primary.dark,
+    secondary: colors.secondary.light,
+    background: '#121212',
+    white: colors.black,
+    black: colors.white,
+    grey0: '#1E1E1E',
+    grey1: '#2C2C2C',
+    grey2: '#3D3D3D',
+    error: '#EF9A9A',
+    success: '#A5D6A7',
+    warning: '#FFCC80',
+  },
+  mode: 'light', // Default mode
+  components: {
+    Button: {
+      buttonStyle: {
+        borderRadius: 8,
+      },
+    },
+    Text: {
+      style: {
+        fontFamily: 'System',
+      },
+    },
+  },
+});

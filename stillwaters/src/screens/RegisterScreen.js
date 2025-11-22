@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { Input, Button, Text } from 'react-native-elements';
+import { Input, Button, Text } from '@rneui/themed';
 import { commonStyles, colors, spacing, typography } from '../utils/theme';
 import useUserStore from '../store/useUserStore';
 

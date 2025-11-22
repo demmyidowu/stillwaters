@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Alert } from 'react-native';
-import { Input, Button } from 'react-native-elements';
+import { View, ScrollView, StyleSheet, TextInput, Alert } from 'react-native';
+import { Text, Button, Icon, useTheme } from '@rneui/themed';
 import { commonStyles, colors, spacing, typography } from '../utils/theme';
 import useJournalStore from '../store/useJournalStore';
 
@@ -8,55 +8,45 @@ import useJournalStore from '../store/useJournalStore';
  * Journal Entry Screen
  * 
  * Allows users to create a new journal entry or edit an existing one.
- * Handles saving and deleting entries via the journal store.
  */
-const JournalEntryScreen = ({ navigation, route }) => {
-    const { entryId } = route.params || {};
-    const { entries, addEntry, updateEntry, deleteEntry } = useJournalStore();
+const JournalEntryScreen = ({ route, navigation }) => {
+    const { entry } = route.params || {};
+    const isEditing = !!entry;
+    const { theme } = useTheme();
 
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
+    const [title, setTitle] = useState(entry ? entry.title : '');
+    const [content, setContent] = useState(entry ? entry.content : '');
+    const [tags, setTags] = useState(entry ? entry.tags.join(', ') : '');
 
-    // Load entry data if editing
-    useEffect(() => {
-        if (entryId) {
-            const entry = entries.find(e => e.id === entryId);
-            if (entry) {
-                setTitle(entry.title);
-                setContent(entry.content);
-                navigation.setOptions({ title: 'Edit Entry' });
-            }
+    const { addEntry, updateEntry, deleteEntry, isLoading } = useJournalStore();
+
+    const handleSave = async () => {
+        if (!title.trim() || !content.trim()) {
+            Alert.alert('Incomplete Entry', 'Please add a title and some thoughts before saving.');
+            return;
         }
-    }, [entryId, entries, navigation]);
 
-    /**
-     * Handle saving the entry (create or update).
-     */
-    const handleSave = () => {
-        if (!title.trim() && !content.trim()) return;
+        const tagList = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
 
-        if (entryId) {
-            updateEntry(entryId, { title, content });
+        if (isEditing) {
+            await updateEntry(entry.id, { title, content, tags: tagList });
         } else {
-            addEntry({ title, content });
+            await addEntry({ title, content, tags: tagList });
         }
         navigation.goBack();
     };
 
-    /**
-     * Handle deleting the entry with confirmation.
-     */
     const handleDelete = () => {
         Alert.alert(
-            "Delete Entry",
-            "Are you sure you want to delete this reflection?",
+            'Delete Entry',
+            'Are you sure you want to delete this reflection?',
             [
-                { text: "Cancel", style: "cancel" },
+                { text: 'Cancel', style: 'cancel' },
                 {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: () => {
-                        deleteEntry(entryId);
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await deleteEntry(entry.id);
                         navigation.goBack();
                     }
                 }
@@ -65,92 +55,111 @@ const JournalEntryScreen = ({ navigation, route }) => {
     };
 
     return (
-        <ScrollView style={styles.container}>
-            {/* Title Input */}
-            <Input
-                placeholder="Title"
-                value={title}
-                onChangeText={setTitle}
-                inputContainerStyle={styles.titleInput}
-                inputStyle={styles.titleText}
-                placeholderTextColor={colors.secondary.medium}
-            />
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <ScrollView style={styles.scrollView}>
+                <TextInput
+                    style={[styles.titleInput, { color: theme.colors.black }]}
+                    placeholder="Title your reflection..."
+                    placeholderTextColor={theme.colors.grey1}
+                    value={title}
+                    onChangeText={setTitle}
+                    maxLength={100}
+                />
 
-            {/* Content Input */}
-            <Input
-                placeholder="Write your reflection here..."
-                value={content}
-                onChangeText={setContent}
-                multiline
-                inputContainerStyle={styles.contentInput}
-                inputStyle={styles.contentText}
-                placeholderTextColor={colors.secondary.medium}
-            />
+                <View style={[styles.divider, { backgroundColor: theme.colors.grey0 }]} />
 
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
+                <TextInput
+                    style={[styles.contentInput, { color: theme.colors.black }]}
+                    placeholder="Pour out your heart..."
+                    placeholderTextColor={theme.colors.grey1}
+                    value={content}
+                    onChangeText={setContent}
+                    multiline
+                    textAlignVertical="top"
+                />
+
+                <View style={[styles.tagsInputContainer, { borderTopColor: theme.colors.grey0 }]}>
+                    <Icon name="pricetag-outline" type="ionicon" size={20} color={theme.colors.grey1} style={styles.tagIcon} />
+                    <TextInput
+                        style={[styles.tagsInput, { color: theme.colors.black }]}
+                        placeholder="Tags (comma separated)..."
+                        placeholderTextColor={theme.colors.grey1}
+                        value={tags}
+                        onChangeText={setTags}
+                    />
+                </View>
+            </ScrollView>
+
+            <View style={[styles.footer, { borderTopColor: theme.colors.grey0, backgroundColor: theme.colors.white }]}>
+                {isEditing && (
+                    <Button
+                        type="clear"
+                        icon={<Icon name="trash-outline" type="ionicon" color={theme.colors.error} />}
+                        onPress={handleDelete}
+                        containerStyle={styles.deleteButton}
+                    />
+                )}
                 <Button
                     title="Save Reflection"
                     onPress={handleSave}
-                    buttonStyle={styles.saveButton}
-                    containerStyle={styles.buttonWrapper}
+                    loading={isLoading}
+                    containerStyle={[styles.saveButton, isEditing ? { flex: 1 } : { width: '100%' }]}
+                    buttonStyle={{ backgroundColor: theme.colors.primary }}
                 />
-
-                {entryId && (
-                    <Button
-                        title="Delete"
-                        type="outline"
-                        onPress={handleDelete}
-                        buttonStyle={styles.deleteButton}
-                        titleStyle={{ color: colors.semantic.error }}
-                        containerStyle={styles.buttonWrapper}
-                    />
-                )}
             </View>
-        </ScrollView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        ...commonStyles.container,
+        flex: 1,
+    },
+    scrollView: {
+        flex: 1,
         padding: spacing.m,
-        backgroundColor: colors.white,
     },
     titleInput: {
-        borderBottomWidth: 0,
-        marginBottom: spacing.s,
-    },
-    titleText: {
-        fontSize: typography.sizes.h2,
+        fontSize: typography.sizes.h3,
         fontWeight: typography.weights.bold,
-        color: colors.primary.dark,
+        marginBottom: spacing.s,
+        paddingVertical: spacing.s,
     },
-    contentInput: {
-        borderBottomWidth: 0,
-        minHeight: 200,
-    },
-    contentText: {
-        fontSize: typography.sizes.body,
-        color: colors.secondary.dark,
-        lineHeight: 24,
-    },
-    buttonContainer: {
-        marginTop: spacing.xl,
-        marginBottom: spacing.xxl,
-    },
-    buttonWrapper: {
+    divider: {
+        height: 1,
         marginBottom: spacing.m,
     },
-    saveButton: {
-        backgroundColor: colors.primary.blue,
-        borderRadius: 24,
-        paddingVertical: spacing.m,
+    contentInput: {
+        fontSize: typography.sizes.body,
+        lineHeight: 24,
+        minHeight: 200,
+        marginBottom: spacing.l,
+    },
+    tagsInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingTop: spacing.m,
+        borderTopWidth: 1,
+        marginBottom: spacing.xxl,
+    },
+    tagIcon: {
+        marginRight: spacing.s,
+    },
+    tagsInput: {
+        flex: 1,
+        fontSize: typography.sizes.body,
+    },
+    footer: {
+        flexDirection: 'row',
+        padding: spacing.m,
+        borderTopWidth: 1,
+        alignItems: 'center',
     },
     deleteButton: {
-        borderColor: colors.semantic.error,
-        borderRadius: 24,
-        paddingVertical: spacing.m,
+        marginRight: spacing.m,
+    },
+    saveButton: {
+        // Flex handled dynamically
     },
 });
 

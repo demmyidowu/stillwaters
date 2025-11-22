@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, Alert } from 'react-native';
-import { Text, ListItem, Switch, Icon, Avatar, Button } from 'react-native-elements';
+import { Text, ListItem, Switch, Icon, Button, useTheme } from '@rneui/themed';
 import { commonStyles, colors, spacing, typography } from '../utils/theme';
 import useUserStore from '../store/useUserStore';
 
@@ -11,7 +11,8 @@ import useUserStore from '../store/useUserStore';
  * Allows users to toggle preferences (notifications, dark mode) and sign out.
  */
 const SettingsScreen = ({ navigation }) => {
-    const { user, settings, toggleNotifications, toggleDarkMode, setTranslation, signOut } = useUserStore();
+    const { user, settings, toggleNotifications, toggleDarkMode, signOut } = useUserStore();
+    const { theme, updateTheme } = useTheme();
 
     /**
      * Handle user sign out with confirmation.
@@ -27,24 +28,27 @@ const SettingsScreen = ({ navigation }) => {
                     style: "destructive",
                     onPress: async () => {
                         await signOut();
-                        // Navigation to Auth stack is automatic via AppNavigator
                     }
                 }
             ]
         );
     };
 
+    const handleToggleDarkMode = () => {
+        toggleDarkMode();
+        updateTheme((theme) => ({
+            mode: theme.mode === 'light' ? 'dark' : 'light',
+        }));
+    };
+
     return (
-        <ScrollView style={styles.container}>
+        <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
             {/* Profile Section */}
-            <View style={styles.profileSection}>
-                <Avatar
-                    rounded
-                    size="large"
-                    icon={{ name: 'person', type: 'ionicon' }}
-                    containerStyle={styles.avatar}
-                />
-                <Text h4 style={styles.name}>{user?.name || 'User'}</Text>
+            <View style={[styles.profileSection, { backgroundColor: theme.colors.white }]}>
+                <View style={styles.avatarContainer}>
+                    <Icon name="person" type="ionicon" size={40} color={colors.white} />
+                </View>
+                <Text h4 style={[styles.name, { color: theme.colors.black }]}>{user?.name || 'User'}</Text>
                 <Text style={styles.email}>{user?.email || 'email@example.com'}</Text>
                 <View style={styles.badge}>
                     <Text style={styles.badgeText}>{user?.tier || 'Free'} Plan</Text>
@@ -52,13 +56,13 @@ const SettingsScreen = ({ navigation }) => {
             </View>
 
             {/* Preferences Section */}
-            <View style={styles.section}>
+            <View style={[styles.section, { backgroundColor: theme.colors.white, borderColor: theme.colors.grey0 }]}>
                 <Text style={styles.sectionTitle}>Preferences</Text>
 
-                <ListItem bottomDivider containerStyle={styles.listItem}>
+                <ListItem bottomDivider containerStyle={{ backgroundColor: theme.colors.white }}>
                     <Icon name="notifications-outline" type="ionicon" color={colors.primary.blue} />
                     <ListItem.Content>
-                        <ListItem.Title>Notifications</ListItem.Title>
+                        <ListItem.Title style={{ color: theme.colors.black }}>Notifications</ListItem.Title>
                     </ListItem.Content>
                     <Switch
                         value={settings.notifications}
@@ -67,22 +71,22 @@ const SettingsScreen = ({ navigation }) => {
                     />
                 </ListItem>
 
-                <ListItem bottomDivider containerStyle={styles.listItem}>
+                <ListItem bottomDivider containerStyle={{ backgroundColor: theme.colors.white }}>
                     <Icon name="moon-outline" type="ionicon" color={colors.primary.blue} />
                     <ListItem.Content>
-                        <ListItem.Title>Dark Mode</ListItem.Title>
+                        <ListItem.Title style={{ color: theme.colors.black }}>Dark Mode</ListItem.Title>
                     </ListItem.Content>
                     <Switch
                         value={settings.darkMode}
-                        onValueChange={toggleDarkMode}
+                        onValueChange={handleToggleDarkMode}
                         trackColor={{ true: colors.primary.blue }}
                     />
                 </ListItem>
 
-                <ListItem bottomDivider containerStyle={styles.listItem} onPress={() => { }}>
+                <ListItem bottomDivider containerStyle={{ backgroundColor: theme.colors.white }} onPress={() => { }}>
                     <Icon name="book-outline" type="ionicon" color={colors.primary.blue} />
                     <ListItem.Content>
-                        <ListItem.Title>Bible Translation</ListItem.Title>
+                        <ListItem.Title style={{ color: theme.colors.black }}>Bible Translation</ListItem.Title>
                         <ListItem.Subtitle>{settings.translation}</ListItem.Subtitle>
                     </ListItem.Content>
                     <ListItem.Chevron />
@@ -90,21 +94,21 @@ const SettingsScreen = ({ navigation }) => {
             </View>
 
             {/* Support Section */}
-            <View style={styles.section}>
+            <View style={[styles.section, { backgroundColor: theme.colors.white, borderColor: theme.colors.grey0 }]}>
                 <Text style={styles.sectionTitle}>Support</Text>
 
-                <ListItem bottomDivider containerStyle={styles.listItem} onPress={() => { }}>
+                <ListItem bottomDivider containerStyle={{ backgroundColor: theme.colors.white }} onPress={() => Alert.alert('Help Center', 'Coming soon!')}>
                     <Icon name="help-circle-outline" type="ionicon" color={colors.secondary.medium} />
                     <ListItem.Content>
-                        <ListItem.Title>Help Center</ListItem.Title>
+                        <ListItem.Title style={{ color: theme.colors.black }}>Help Center</ListItem.Title>
                     </ListItem.Content>
                     <ListItem.Chevron />
                 </ListItem>
 
-                <ListItem bottomDivider containerStyle={styles.listItem} onPress={() => { }}>
+                <ListItem bottomDivider containerStyle={{ backgroundColor: theme.colors.white }} onPress={() => Alert.alert('Privacy Policy', 'Your privacy is important to us.')}>
                     <Icon name="shield-checkmark-outline" type="ionicon" color={colors.secondary.medium} />
                     <ListItem.Content>
-                        <ListItem.Title>Privacy Policy</ListItem.Title>
+                        <ListItem.Title style={{ color: theme.colors.black }}>Privacy Policy</ListItem.Title>
                     </ListItem.Content>
                     <ListItem.Chevron />
                 </ListItem>
@@ -126,20 +130,23 @@ const SettingsScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: {
-        ...commonStyles.container,
+        flex: 1,
     },
     profileSection: {
         alignItems: 'center',
         padding: spacing.xl,
-        backgroundColor: colors.white,
         marginBottom: spacing.m,
     },
-    avatar: {
+    avatarContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         backgroundColor: colors.primary.light,
+        justifyContent: 'center',
+        alignItems: 'center',
         marginBottom: spacing.m,
     },
     name: {
-        color: colors.primary.dark,
         marginBottom: 4,
     },
     email: {
@@ -159,10 +166,8 @@ const styles = StyleSheet.create({
     },
     section: {
         marginBottom: spacing.m,
-        backgroundColor: colors.white,
         borderTopWidth: 1,
         borderBottomWidth: 1,
-        borderColor: colors.secondary.light,
     },
     sectionTitle: {
         padding: spacing.m,
@@ -171,9 +176,6 @@ const styles = StyleSheet.create({
         fontSize: typography.sizes.small,
         fontWeight: typography.weights.bold,
         textTransform: 'uppercase',
-    },
-    listItem: {
-        backgroundColor: colors.white,
     },
     signOutContainer: {
         marginVertical: spacing.l,

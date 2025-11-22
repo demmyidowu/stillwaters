@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
-import { Text, Card, Divider } from 'react-native-elements';
-import { commonStyles, colors, spacing, typography } from '../utils/theme';
+import { Text, useTheme } from '@rneui/themed';
+import { spacing, typography } from '../utils/theme';
 
 /**
  * FAQ Detail Screen
@@ -11,100 +11,82 @@ import { commonStyles, colors, spacing, typography } from '../utils/theme';
  */
 const FAQDetailScreen = ({ route }) => {
     const { faq } = route.params;
+    const { theme } = useTheme();
 
     return (
-        <ScrollView style={styles.container}>
-            {/* Header Section */}
-            <View style={styles.header}>
-                <Text style={styles.category}>{faq.category.toUpperCase()}</Text>
-                <Text h3 style={styles.question}>{faq.question}</Text>
+        <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.card, { backgroundColor: theme.colors.white, shadowColor: theme.colors.black }]}>
+                <Text style={[styles.category, { color: theme.colors.primary }]}>{faq.category.toUpperCase()}</Text>
+                <Text h4 style={[styles.question, { color: theme.colors.black }]}>{faq.question}</Text>
+
+                <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>Summary</Text>
+                <Text style={[styles.answer, { color: theme.colors.black }]}>{faq.answer.summary}</Text>
+
+                <View style={[styles.divider, { backgroundColor: theme.colors.grey0 }]} />
+
+                <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>Detailed Explanation</Text>
+                <Text style={[styles.answer, { color: theme.colors.black }]}>{faq.answer.detailed}</Text>
+
+                {faq.answer.scriptures && faq.answer.scriptures.length > 0 && (
+                    <View style={styles.scriptureContainer}>
+                        <Text style={[styles.scriptureTitle, { color: theme.colors.grey1 }]}>Related Scripture:</Text>
+                        {faq.answer.scriptures.map((scripture, index) => (
+                            <Text key={index} style={[styles.scripture, { color: theme.colors.grey2 }]}>• {scripture}</Text>
+                        ))}
+                    </View>
+                )}
             </View>
-
-            {/* Answer Content */}
-            <Card containerStyle={styles.card}>
-                <Text style={styles.summaryLabel}>Summary</Text>
-                <Text style={styles.summaryText}>{faq.answer.summary}</Text>
-
-                <Divider style={styles.divider} />
-
-                <Text style={styles.detailedLabel}>Detailed Explanation</Text>
-                <Text style={styles.detailedText}>{faq.answer.detailed}</Text>
-
-                {/* Scripture References */}
-                <View style={styles.scriptureContainer}>
-                    <Text style={styles.scriptureLabel}>Key Scriptures</Text>
-                    {faq.answer.scriptures.map((scripture, index) => (
-                        <Text key={index} style={styles.scriptureItem}>• {scripture}</Text>
-                    ))}
-                </View>
-            </Card>
         </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        ...commonStyles.container,
+        flex: 1,
+        padding: spacing.m,
     },
-    header: {
-        padding: spacing.l,
-        backgroundColor: colors.primary.blue,
+    card: {
+        borderRadius: 8,
+        padding: spacing.m,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     category: {
-        color: 'rgba(255,255,255,0.8)',
         fontSize: typography.sizes.small,
         fontWeight: typography.weights.bold,
         marginBottom: spacing.s,
     },
     question: {
-        color: colors.white,
-        fontSize: typography.sizes.h2,
-    },
-    card: {
-        ...commonStyles.card,
-        marginTop: -spacing.l,
-        marginHorizontal: spacing.m,
-        marginBottom: spacing.l,
-        padding: spacing.l,
-    },
-    summaryLabel: {
-        color: colors.primary.dark,
-        fontWeight: typography.weights.bold,
-        marginBottom: spacing.s,
-    },
-    summaryText: {
-        fontSize: typography.sizes.body,
-        color: colors.secondary.dark,
-        lineHeight: 24,
         marginBottom: spacing.m,
     },
     divider: {
-        marginVertical: spacing.m,
+        height: 1,
+        marginBottom: spacing.m,
     },
-    detailedLabel: {
-        color: colors.primary.dark,
+    sectionTitle: {
+        fontSize: typography.sizes.body,
         fontWeight: typography.weights.bold,
         marginBottom: spacing.s,
     },
-    detailedText: {
+    answer: {
         fontSize: typography.sizes.body,
-        color: colors.secondary.dark,
         lineHeight: 24,
         marginBottom: spacing.l,
     },
     scriptureContainer: {
-        backgroundColor: colors.primary.light,
-        padding: spacing.m,
-        borderRadius: 8,
+        marginTop: spacing.m,
     },
-    scriptureLabel: {
-        color: colors.primary.dark,
+    scriptureTitle: {
+        fontSize: typography.sizes.small,
         fontWeight: typography.weights.bold,
         marginBottom: spacing.s,
+        textTransform: 'uppercase',
     },
-    scriptureItem: {
-        color: colors.primary.dark,
+    scripture: {
         fontSize: typography.sizes.body,
+        fontStyle: 'italic',
         marginBottom: 4,
     },
 });

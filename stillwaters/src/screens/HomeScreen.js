@@ -1,157 +1,144 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { Text, Input, Button, Icon } from 'react-native-elements';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useEffect, useRef } from 'react';
+import { View, FlatList, StyleSheet, KeyboardAvoidingView, Platform, Animated, Easing } from 'react-native';
+import { Text, Input, Icon, useTheme } from '@rneui/themed';
 import { commonStyles, colors, spacing, typography } from '../utils/theme';
 import useChatStore from '../store/useChatStore';
-import { sendMessage } from '../services/api';
 
 /**
- * MessageBubble Component
+ * Message Bubble Component
  * 
- * Renders a single chat message.
- * Differentiates between user messages (right-aligned, blue) and bot messages (left-aligned, white).
- * Displays scripture references if available in the message metadata.
+ * Displays a single chat message with "flowy" animations and themed styling.
  */
-const MessageBubble = ({ message }) => {
-    const isUser = message.sender === 'user';
+const MessageBubble = ({ item, theme }) => {
+    const isUser = item.sender === 'user';
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const translateY = useRef(new Animated.Value(20)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.cubic),
+            }),
+            Animated.timing(translateY, {
+                toValue: 0,
+                duration: 500,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.cubic),
+            }),
+        ]).start();
+    }, []);
 
     return (
-        <View style={[
-            styles.messageBubble,
-            isUser ? styles.userBubble : styles.botBubble
+        <Animated.View style={[
+            styles.messageBubbleContainer,
+            isUser ? styles.userBubbleContainer : styles.botBubbleContainer,
+            { opacity: fadeAnim, transform: [{ translateY }] }
         ]}>
-            <Text style={[
-                styles.messageText,
-                isUser ? styles.userText : styles.botText
+            <View style={[
+                styles.messageBubble,
+                isUser ?
+                    [styles.userBubble, { backgroundColor: theme.colors.primary }] :
+                    [styles.botBubble, { backgroundColor: theme.colors.white }],
+                item.data?.isVerse && styles.verseBubble // Apply verse styling
             ]}>
-                {message.text}
-            </Text>
-            {/* Render scripture metadata if present */}
-            {message.data && (
-                <View style={styles.scriptureContainer}>
-                    <Text style={styles.scriptureReference}>
-                        {message.data.primary_scripture.reference} ({message.data.primary_scripture.translation})
-                    </Text>
-                    <Text style={styles.scriptureText}>
-                        "{message.data.primary_scripture.text}"
-                    </Text>
-                </View>
-            )}
-        </View>
+                <Text style={[
+                    styles.messageText,
+                    isUser ? { color: theme.colors.white } : { color: theme.colors.black },
+                    item.data?.isVerse && styles.verseText // Apply verse text styling
+                ]}>
+                    {item.text}
+                </Text>
+            </View>
+        </Animated.View>
     );
 };
 
 /**
- * HomeScreen (The Guide)
+ * Chat Screen (The Guide)
  * 
- * The main chat interface for the application.
- * Allows users to send messages to the AI chatbot and view the conversation history.
+ * The main chat interface.
+ * Now supports loading specific conversations and "flowy" animations.
  */
-const HomeScreen = () => {
-    const insets = useSafeAreaInsets();
-    const [inputText, setInputText] = useState('');
+const HomeScreen = ({ route, navigation }) => {
+    const { conversationId } = route.params || {};
+    const { messages, isLoading, sendUserMessage, loadConversation, clearMessages } = useChatStore();
+    const [inputText, setInputText] = React.useState('');
     const flatListRef = useRef(null);
+    const { theme } = useTheme();
 
-    // Access chat store state and actions
-    const { messages, isLoading, addMessage, setLoading } = useChatStore();
+    useEffect(() => {
+        if (conversationId) {
+            loadConversation(conversationId);
+        } else {
+            // New conversation
+            clearMessages();
+        }
+    }, [conversationId]);
 
-    /**
-     * Handle sending a message.
-     * 1. Adds user message to the store.
-     * 2. Calls the backend API to get a response.
-     * 3. Adds the bot's response to the store.
-     */
     const handleSend = async () => {
         if (!inputText.trim()) return;
-
-        const userMessage = {
-            id: Date.now().toString(),
-            text: inputText.trim(),
-            sender: 'user',
-            timestamp: new Date(),
-        };
-
-        addMessage(userMessage);
+        const text = inputText;
         setInputText('');
-        setLoading(true);
-
-        try {
-            // Call the backend API (Gemini)
-            const response = await sendMessage(userMessage.text);
-
-            const botMessage = {
-                id: (Date.now() + 1).toString(),
-                text: response.interpretations[0].view, // Display first interpretation as main text for now
-                sender: 'bot',
-                timestamp: new Date(),
-                data: response // Store full response data
-            };
-
-            addMessage(botMessage);
-        } catch (error) {
-            // Handle API errors
-            const errorMessage = {
-                id: (Date.now() + 1).toString(),
-                text: "I'm having trouble connecting to the waters right now. Please try again.",
-                sender: 'bot',
-                timestamp: new Date(),
-            };
-            addMessage(errorMessage);
-        } finally {
-            setLoading(false);
-        }
+        await sendUserMessage(text);
     };
 
-    // Auto-scroll to the bottom when new messages arrive
     useEffect(() => {
+        // Scroll to bottom when messages change
         if (flatListRef.current && messages.length > 0) {
-            flatListRef.current.scrollToEnd({ animated: true });
+            setTimeout(() => flatListRef.current.scrollToEnd({ animated: true }), 100);
         }
     }, [messages]);
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            {/* Message List */}
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <FlatList
                 ref={flatListRef}
                 data={messages}
-                renderItem={({ item }) => <MessageBubble message={item} />}
+                renderItem={({ item }) => <MessageBubble item={item} theme={theme} />}
                 keyExtractor={item => item.id}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={styles.chatContent}
                 ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Icon name="water-outline" type="ionicon" size={64} color={colors.primary.light} />
-                        <Text style={styles.emptyText}>Ask a question to begin...</Text>
-                    </View>
+                    !isLoading && (
+                        <View style={styles.emptyContainer}>
+                            <Icon name="water-outline" type="ionicon" size={80} color={theme.colors.grey2} />
+                            <Text style={[styles.emptyText, { color: theme.colors.grey1 }]}>
+                                The waters are still. Ask a question to begin.
+                            </Text>
+                        </View>
+                    )
+                }
+                ListFooterComponent={
+                    isLoading && (
+                        <View style={styles.loadingContainer}>
+                            <Text style={[styles.loadingText, { color: theme.colors.grey1 }]}>The Guide is reflecting...</Text>
+                        </View>
+                    )
                 }
             />
 
-            {/* Loading Indicator */}
-            {isLoading && (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color={colors.primary.blue} />
-                    <Text style={styles.loadingText}>Seeking wisdom...</Text>
-                </View>
-            )}
-
-            {/* Input Area */}
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                <View style={styles.inputContainer}>
+                <View style={[styles.inputContainer, { backgroundColor: theme.colors.white, borderTopColor: theme.colors.grey0 }]}>
                     <Input
                         placeholder="Ask a theological question..."
+                        placeholderTextColor={theme.colors.grey1}
                         value={inputText}
                         onChangeText={setInputText}
                         containerStyle={styles.inputFieldContainer}
-                        inputContainerStyle={styles.inputField}
+                        inputContainerStyle={[styles.inputField, { backgroundColor: theme.colors.grey0 }]}
+                        inputStyle={{ color: theme.colors.black, fontSize: typography.sizes.body }}
+                        rightIconContainerStyle={styles.rightIconContainer}
                         rightIcon={
                             <Icon
                                 name="send"
                                 type="ionicon"
-                                color={inputText.trim() ? colors.primary.blue : colors.secondary.medium}
+                                size={24}
+                                color={inputText.trim() ? theme.colors.primary : theme.colors.grey2}
                                 onPress={handleSend}
                                 disabled={!inputText.trim() || isLoading}
                             />
@@ -166,97 +153,87 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.secondary.light,
     },
-    listContent: {
+    chatContent: {
         padding: spacing.m,
-        paddingBottom: spacing.xxl,
+        paddingBottom: spacing.m,
+    },
+    messageBubbleContainer: {
+        marginBottom: spacing.m,
+        width: '100%',
+    },
+    userBubbleContainer: {
+        alignItems: 'flex-end',
+    },
+    botBubbleContainer: {
+        alignItems: 'flex-start',
+    },
+    messageBubble: {
+        maxWidth: '80%',
+        padding: spacing.m,
+        borderRadius: 20,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+    userBubble: {
+        borderBottomRightRadius: 4, // "Flowy" shape
+    },
+    botBubble: {
+        borderBottomLeftRadius: 4, // "Flowy" shape
+    },
+    messageText: {
+        fontSize: typography.sizes.body,
+        lineHeight: 22,
     },
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 100,
+        opacity: 0.7,
     },
     emptyText: {
-        color: colors.secondary.medium,
         marginTop: spacing.m,
-        fontSize: typography.sizes.body,
-    },
-    messageBubble: {
-        maxWidth: '80%',
-        padding: spacing.m,
-        borderRadius: 16,
-        marginBottom: spacing.m,
-    },
-    userBubble: {
-        alignSelf: 'flex-end',
-        backgroundColor: colors.primary.blue,
-        borderBottomRightRadius: 4,
-    },
-    botBubble: {
-        alignSelf: 'flex-start',
-        backgroundColor: colors.white,
-        borderBottomLeftRadius: 4,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 1,
-    },
-    messageText: {
-        fontSize: typography.sizes.body,
-        lineHeight: 22,
-    },
-    userText: {
-        color: colors.white,
-    },
-    botText: {
-        color: colors.secondary.dark,
-    },
-    scriptureContainer: {
-        marginTop: spacing.s,
-        paddingTop: spacing.s,
-        borderTopWidth: 1,
-        borderTopColor: colors.secondary.light,
-    },
-    scriptureReference: {
-        fontSize: typography.sizes.small,
-        fontWeight: typography.weights.bold,
-        color: colors.primary.dark,
-        marginBottom: 2,
-    },
-    scriptureText: {
-        fontSize: typography.sizes.caption,
-        fontStyle: 'italic',
-        color: colors.secondary.medium,
+        fontSize: typography.sizes.h3,
+        textAlign: 'center',
+        paddingHorizontal: spacing.l,
     },
     loadingContainer: {
-        flexDirection: 'row',
+        padding: spacing.m,
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: spacing.s,
     },
     loadingText: {
-        marginLeft: spacing.s,
-        color: colors.secondary.medium,
-        fontSize: typography.sizes.caption,
+        fontStyle: 'italic',
     },
     inputContainer: {
-        backgroundColor: colors.white,
-        paddingTop: spacing.s,
+        padding: spacing.s,
         borderTopWidth: 1,
-        borderTopColor: colors.secondary.light,
     },
     inputFieldContainer: {
-        paddingHorizontal: spacing.s,
+        paddingHorizontal: 0,
     },
     inputField: {
         borderBottomWidth: 0,
-        backgroundColor: colors.secondary.light,
         borderRadius: 24,
         paddingHorizontal: spacing.m,
         height: 48,
+    },
+    rightIconContainer: {
+        marginRight: spacing.xs,
+    },
+    verseBubble: {
+        backgroundColor: '#f0f8ff', // Light blue background for verses (AliceBlue)
+        borderLeftWidth: 4,
+        borderLeftColor: colors.primary.blue,
+        borderRadius: 8,
+        borderBottomLeftRadius: 8,
+    },
+    verseText: {
+        fontStyle: 'italic',
+        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     },
 });
 

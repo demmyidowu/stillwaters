@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -12,8 +13,11 @@ app.use(cors());
 app.use(express.json());
 
 // Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const apiKey = process.env.GEMINI_API_KEY;
+console.log('API Key Status:', apiKey ? `Loaded (${apiKey.substring(0, 4)}...)` : 'Missing');
+
+const genAI = new GoogleGenerativeAI(apiKey);
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 const chatLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
@@ -30,21 +34,18 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
         // Simulate network delay
         setTimeout(() => {
             res.json({
-                question,
-                primary_scripture: {
-                    reference: "Psalm 23:2",
-                    text: "He makes me lie down in green pastures, he leads me beside quiet waters.",
-                    translation: "NIV"
-                },
                 interpretations: [
                     {
-                        tradition: "General",
-                        view: "This verse speaks to the peace and restoration that God provides. 'Green pastures' symbolize abundance and rest, while 'quiet waters' represent a state of calm and refreshment for the soul."
+                        view: "This verse speaks to the peace and restoration that God provides. 'Green pastures' symbolize abundance and rest, while 'quiet waters' represent a state of calm and refreshment for the soul.",
+                        scriptures: [
+                            {
+                                reference: "Psalm 23:2",
+                                text: "He makes me lie down in green pastures, he leads me beside quiet waters.",
+                                translation: "NIV"
+                            }
+                        ]
                     }
-                ],
-                context: "David, the shepherd king, writes this psalm expressing trust in God's provision and protection.",
-                application: "Take a moment today to pause and allow God to restore your soul, trusting that He knows what you need for rest.",
-                related_verses: ["Philippians 4:7", "Matthew 11:28"]
+                ]
             });
         }, 1500);
         return;
@@ -52,25 +53,28 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 
     try {
         console.log('Calling Gemini API...');
-        const prompt = `
-      You are a wise, compassionate, and biblically grounded theological assistant named "StillWaters".
-      User Question: "${question}"
-      
-      Please provide a response in the following JSON format ONLY (no markdown code blocks):
-      {
-        "question": "${question}",
-        "primary_scripture": {
+        const SYSTEM_PROMPT = `
+You are "The Guide", a wise, compassionate, and theologically deep Christian mentor.
+Your purpose is to help users navigate their spiritual journey with biblical truth and grace.
+
+Guidelines:
+1.  **Biblical & Theological Depth**: Do not just give surface-level advice. Root your answers deeply in Scripture and sound theology. Explain *why* something is true based on God's character and Word.
+2.  **Compassionate Tone**: Speak like a caring mentor or spiritual father/mother. Be gentle but firm in truth. Use "Still Waters" imagery where appropriate (peace, depth, refreshment).
+3.  **Scripture Handling**: Do NOT quote the full scripture text inside the 'view' field. Instead, provide the full text in the 'scriptures' array. The 'view' should contain your theological explanation and application, referencing the scripture but not quoting it entirely.
+4.  **Structure**:
+    *   **Direct Answer**: Address the user's question or feeling directly.
+    *   **Theological Insight**: Connect the scripture to the user's situation with deep insight.
+    *   **Application**: Give a practical step or thought for reflection.
+
+Output Format (JSON):
+{
+  "interpretations": [
+    {
+      "view": "Your full, rich response here, including the quoted scripture.",
+      "scriptures": [
+        {
           "reference": "Book Chapter:Verse",
           "text": "Full text of the verse",
-          "translation": "NIV or ESV"
-        },
-        "interpretations": [
-          {
-            "tradition": "General/Historical/Theological",
-            "view": "A concise explanation of the meaning."
-          }
-        ],
-        "context": "Brief historical or literary context.",
         "application": "A practical application for the user's life.",
         "related_verses": ["Book Chapter:Verse", "Book Chapter:Verse"]
       }

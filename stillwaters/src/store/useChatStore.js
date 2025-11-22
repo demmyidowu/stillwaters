@@ -34,9 +34,13 @@ const useChatStore = create((set, get) => ({
 
             if (error) throw error;
 
-            // Update state with the new conversation ID
-            set({ conversationId: data.id });
-            return data.id;
+            // Update state with the new conversation ID and add to list
+            const newConversation = data;
+            set(state => ({
+                conversationId: newConversation.id,
+                conversations: [newConversation, ...state.conversations]
+            }));
+            return newConversation.id;
         } catch (error) {
             console.error('Error creating conversation:', error);
             return null;
@@ -87,6 +91,185 @@ const useChatStore = create((set, get) => ({
      * @param {boolean} loading 
      */
     setLoading: (loading) => set({ isLoading: loading }),
+
+    /**
+     * Send a message from the user and get a response from the AI.
+     * Handles optimistic updates, API calls, and error states.
+     * 
+     * @param {string} text - The user's message text.
+     */
+    sendUserMessage: async (text) => {
+        if (!text.trim()) return;
+
+        const userMessage = {
+            id: Date.now().toString(),
+            text: text.trim(),
+            sender: 'user',
+            timestamp: new Date(),
+        };
+
+        // 1. Optimistically add user message
+        get().addMessage(userMessage);
+        set({ isLoading: true });
+
+        try {
+            // 2. Call the backend API
+            const { sendMessage } = require('../services/api');
+            const response = await sendMessage(userMessage.text);
+
+            // 3. Create bot message from response (Explanation)
+            const botMessage = {
+                id: (Date.now() + 1).toString(),
+                text: response.interpretations[0].view,
+                sender: 'bot',
+                timestamp: new Date(),
+                data: response
+            };
+
+            // 4. Add bot message
+            get().addMessage(botMessage);
+
+            // 5. Create separate message for the verse
+            let scripture = null;
+            if (response.interpretations?.[0]?.scriptures?.length > 0) {
+                scripture = response.interpretations[0].scriptures[0];
+            } else if (response.primary_scripture) {
+                // Fallback for legacy/mock structure
+                scripture = response.primary_scripture;
+            }
+
+            if (scripture) {
+                const verseMessage = {
+                    id: (Date.now() + 2).toString(),
+                    text: `"${scripture.text}"\n\n— ${scripture.reference} (${scripture.translation || ''})`,
+                    sender: 'bot',
+                    timestamp: new Date(Date.now() + 100), // Slight delay
+                    data: { isVerse: true } // Mark as verse for potential styling
+                };
+                get().addMessage(verseMessage);
+            }
+
+            // 6. Auto-generate title if needed
+            const currentConversationId = get().conversationId;
+            if (currentConversationId) {
+                // Find conversation in local state
+                const conversationIndex = get().conversations.findIndex(c => c.id === currentConversationId);
+                const conversation = get().conversations[conversationIndex];
+
+                // If conversation is "New Conversation" (default), update it
+                if (conversation && conversation.summary === 'New Conversation') {
+                    const newTitle = text.length > 30 ? text.substring(0, 30) + '...' : text;
+
+                    // Update in Supabase
+                    await supabase
+                        .from('conversations')
+                        .update({ summary: newTitle })
+                        .eq('id', currentConversationId);
+
+                    // Update local state
+                    const updatedConversations = [...get().conversations];
+                    updatedConversations[conversationIndex] = { ...conversation, summary: newTitle };
+                    set({ conversations: updatedConversations });
+                }
+            }
+
+        } catch (error) {
+            console.error('Chat Error:', error);
+            const errorMessage = {
+                id: (Date.now() + 1).toString(),
+                text: "I'm having trouble connecting to the waters right now. Please try again later.",
+                sender: 'bot',
+                timestamp: new Date(),
+            };
+            get().addMessage(errorMessage);
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    /**
+     * Delete a conversation.
+     * @param {string} conversationId 
+     */
+    deleteConversation: async (conversationId) => {
+        try {
+            const { error } = await supabase
+                .from('conversations')
+                .delete()
+                .eq('id', conversationId);
+
+            if (error) throw error;
+
+            // Remove from local state
+            set(state => ({
+                conversations: state.conversations.filter(c => c.id !== conversationId),
+                // If deleting current conversation, clear messages
+                messages: state.conversationId === conversationId ? [] : state.messages,
+                conversationId: state.conversationId === conversationId ? null : state.conversationId
+            }));
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+        }
+    },
+
+    conversations: [], // List of past conversations
+
+    /**
+     * Fetch all conversations for the current user.
+     */
+    fetchConversations: async () => {
+        set({ isLoading: true });
+        try {
+            const user = useUserStore.getState().user;
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('conversations')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            set({ conversations: data });
+        } catch (error) {
+            console.error('Error fetching conversations:', error);
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    /**
+     * Load a specific conversation and its messages.
+     * @param {string} conversationId 
+     */
+    loadConversation: async (conversationId) => {
+        set({ isLoading: true, conversationId, messages: [] });
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('conversation_id', conversationId)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+
+            // Transform messages to match UI structure
+            const formattedMessages = data.map(msg => ({
+                id: msg.id,
+                text: msg.text,
+                sender: msg.sender,
+                timestamp: new Date(msg.created_at),
+                data: msg.metadata
+            }));
+
+            set({ messages: formattedMessages });
+        } catch (error) {
+            console.error('Error loading conversation:', error);
+        } finally {
+            set({ isLoading: false });
+        }
+    },
 
     /**
      * Clear all messages and reset the conversation ID.

@@ -1,79 +1,64 @@
 import React from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text, Icon, FAB } from 'react-native-elements';
+import { Text, FAB, Icon, useTheme } from '@rneui/themed';
 import { commonStyles, colors, spacing, typography } from '../utils/theme';
 import useJournalStore from '../store/useJournalStore';
-
-/**
- * Journal Entry Item Component
- * 
- * Renders a single journal entry in the list.
- * Displays date, time, title, preview content, and tags.
- */
-const JournalEntryItem = ({ item, onPress }) => (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-        <View style={styles.itemContainer}>
-            <View style={styles.itemHeader}>
-                <Text style={styles.date}>
-                    {new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                </Text>
-                <Text style={styles.time}>
-                    {new Date(item.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-            </View>
-
-            <Text style={styles.title} numberOfLines={1}>{item.title || 'Untitled'}</Text>
-            <Text style={styles.preview} numberOfLines={2}>{item.content}</Text>
-
-            {/* Render tags if available */}
-            {item.tags && item.tags.length > 0 && (
-                <View style={styles.tagsContainer}>
-                    {item.tags.map((tag, index) => (
-                        <View key={index} style={styles.tag}>
-                            <Text style={styles.tagText}>{tag}</Text>
-                        </View>
-                    ))}
-                </View>
-            )}
-        </View>
-    </TouchableOpacity>
-);
 
 /**
  * Journal Screen (Reflection Pool)
  * 
  * Displays a list of the user's journal entries.
- * Allows navigation to create new entries or view existing ones.
+ * Allows navigation to create or edit entries.
  */
 const JournalScreen = ({ navigation }) => {
     const { entries } = useJournalStore();
+    const { theme } = useTheme();
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             {/* Entry List */}
             <FlatList
                 data={entries}
                 renderItem={({ item }) => (
-                    <JournalEntryItem
-                        item={item}
-                        onPress={() => navigation.navigate('JournalEntry', { entryId: item.id })}
-                    />
+                    <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => navigation.navigate('JournalEntry', { entry: item })}
+                    >
+                        <View style={[styles.entryCard, { backgroundColor: theme.colors.white, shadowColor: theme.colors.black }]}>
+                            <View style={styles.entryHeader}>
+                                <Text style={[styles.entryDate, { color: theme.colors.grey1 }]}>
+                                    {new Date(item.created_at).toLocaleDateString()}
+                                </Text>
+                                <Icon name="chevron-forward" type="ionicon" size={20} color={theme.colors.grey2} />
+                            </View>
+                            <Text h4 style={[styles.entryTitle, { color: theme.colors.black }]} numberOfLines={1}>{item.title}</Text>
+                            <Text style={[styles.entryPreview, { color: theme.colors.grey1 }]} numberOfLines={2}>{item.content}</Text>
+                            {item.tags && item.tags.length > 0 && (
+                                <View style={styles.tagsContainer}>
+                                    {item.tags.map((tag, index) => (
+                                        <View key={index} style={[styles.tag, { backgroundColor: theme.colors.grey0 }]}>
+                                            <Text style={[styles.tagText, { color: theme.colors.grey2 }]}>#{tag}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    </TouchableOpacity>
                 )}
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Icon name="book-outline" type="ionicon" size={64} color={colors.secondary.light} />
-                        <Text style={styles.emptyText}>Your reflection pool is empty.</Text>
-                        <Text style={styles.emptySubText}>Tap + to start writing.</Text>
+                        <Icon name="book-outline" type="ionicon" size={64} color={theme.colors.grey2} />
+                        <Text style={[styles.emptyText, { color: theme.colors.grey1 }]}>Your reflection pool is empty.</Text>
+                        <Text style={[styles.emptySubtext, { color: theme.colors.grey2 }]}>Tap + to add your first entry.</Text>
                     </View>
                 }
             />
 
-            {/* Floating Action Button for new entry */}
             <FAB
                 icon={{ name: 'add', color: 'white' }}
-                color={colors.accent}
+                color={theme.colors.primary}
                 placement="right"
                 onPress={() => navigation.navigate('JournalEntry')}
             />
@@ -83,78 +68,68 @@ const JournalScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: {
-        ...commonStyles.container,
+        flex: 1,
     },
     listContent: {
         padding: spacing.m,
+        paddingBottom: 80, // Space for FAB
     },
-    itemContainer: {
-        backgroundColor: colors.white,
+    entryCard: {
         borderRadius: 12,
         padding: spacing.m,
         marginBottom: spacing.m,
-        shadowColor: colors.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 4,
         elevation: 2,
     },
-    itemHeader: {
+    entryHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: spacing.xs,
     },
-    date: {
+    entryDate: {
         fontSize: typography.sizes.small,
-        color: colors.primary.blue,
         fontWeight: typography.weights.bold,
+        textTransform: 'uppercase',
     },
-    time: {
-        fontSize: typography.sizes.small,
-        color: colors.secondary.medium,
+    entryTitle: {
+        marginBottom: spacing.s,
     },
-    title: {
-        fontSize: typography.sizes.h3,
-        fontWeight: typography.weights.bold,
-        color: colors.primary.dark,
-        marginBottom: 4,
-    },
-    preview: {
+    entryPreview: {
         fontSize: typography.sizes.body,
-        color: colors.secondary.dark,
-        lineHeight: 20,
+        marginBottom: spacing.m,
     },
     tagsContainer: {
         flexDirection: 'row',
-        marginTop: spacing.s,
         flexWrap: 'wrap',
     },
     tag: {
-        backgroundColor: colors.primary.light,
-        borderRadius: 12,
         paddingHorizontal: 8,
-        paddingVertical: 2,
+        paddingVertical: 4,
+        borderRadius: 4,
         marginRight: 8,
-        marginTop: 4,
+        marginBottom: 4,
     },
     tagText: {
-        fontSize: 10,
-        color: colors.primary.dark,
-        fontWeight: typography.weights.bold,
+        fontSize: typography.sizes.caption,
+        fontWeight: typography.weights.medium,
     },
     emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
         marginTop: 100,
     },
     emptyText: {
         marginTop: spacing.m,
         fontSize: typography.sizes.h3,
-        color: colors.secondary.medium,
+        fontWeight: typography.weights.bold,
     },
-    emptySubText: {
+    emptySubtext: {
         marginTop: spacing.s,
         fontSize: typography.sizes.body,
-        color: colors.secondary.medium,
     },
 });
 
