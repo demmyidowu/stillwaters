@@ -83,20 +83,21 @@ export const theme = createTheme({
     success: colors.semantic.success,
     warning: colors.semantic.warning,
   },
+  mode: 'light', // Force light mode
+  // Ensure dark mode uses same colors as light mode to effectively disable it
   darkColors: {
-    primary: colors.primary.dark,
-    secondary: colors.secondary.light,
-    background: '#121212',
-    white: colors.black,
-    black: colors.white,
-    grey0: '#1E1E1E',
-    grey1: '#2C2C2C',
-    grey2: '#3D3D3D',
-    error: '#EF9A9A',
-    success: '#A5D6A7',
-    warning: '#FFCC80',
+    primary: colors.primary.blue,
+    secondary: colors.secondary.medium,
+    background: colors.secondary.light,
+    white: colors.white,
+    black: colors.black,
+    grey0: colors.secondary.light,
+    grey1: colors.secondary.medium,
+    grey2: colors.secondary.dark,
+    error: colors.semantic.error,
+    success: colors.semantic.success,
+    warning: colors.semantic.warning,
   },
-  mode: 'light', // Default mode
   components: {
     Button: {
       buttonStyle: {

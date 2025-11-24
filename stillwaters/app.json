@@ -13,14 +13,23 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.didowu.stillwaters",
+      "buildNumber": "1.0.0"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.didowu.stillwaters",
+      "versionCode": 1
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

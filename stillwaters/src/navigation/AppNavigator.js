@@ -74,7 +74,7 @@ const JournalNavigator = () => {
             headerTintColor: theme.colors.white,
             headerTitleStyle: { fontWeight: typography.weights.bold },
         }}>
-            <JournalStack.Screen name="JournalList" component={JournalScreen} options={{ title: 'Reflection Pool' }} />
+            <JournalStack.Screen name="JournalList" component={JournalScreen} options={{ title: 'The Pond' }} />
             <JournalStack.Screen name="JournalEntry" component={JournalEntryScreen} options={{ title: 'New Reflection' }} />
         </JournalStack.Navigator>
     );
@@ -120,6 +120,7 @@ const TabNavigator = () => {
 
     return (
         <Tab.Navigator
+            initialRouteName="Daily Streams"
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ focused, color, size }) => {
                     let iconName;
@@ -130,7 +131,7 @@ const TabNavigator = () => {
                         iconName = focused ? 'water' : 'water-outline';
                     } else if (route.name === 'Daily Streams') {
                         iconName = focused ? 'calendar' : 'calendar-outline';
-                    } else if (route.name === 'Reflection Pool') {
+                    } else if (route.name === 'The Pond') {
                         iconName = focused ? 'book' : 'book-outline';
                     } else if (route.name === 'Settings') {
                         iconName = focused ? 'settings' : 'settings-outline';
@@ -147,10 +148,10 @@ const TabNavigator = () => {
                 headerShown: false,
             })}
         >
+            <Tab.Screen name="The Pond" component={JournalNavigator} />
             <Tab.Screen name="The Guide" component={GuideNavigator} />
-            <Tab.Screen name="The Well" component={FAQNavigator} />
             <Tab.Screen name="Daily Streams" component={DevotionalScreen} />
-            <Tab.Screen name="Reflection Pool" component={JournalNavigator} />
+            <Tab.Screen name="The Well" component={FAQNavigator} />
             <Tab.Screen name="Settings" component={SettingsScreen} />
         </Tab.Navigator>
     );

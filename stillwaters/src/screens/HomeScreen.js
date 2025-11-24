@@ -9,6 +9,24 @@ import useChatStore from '../store/useChatStore';
  * 
  * Displays a single chat message with "flowy" animations and themed styling.
  */
+import * as Clipboard from 'expo-clipboard';
+import { TouchableOpacity, Alert } from 'react-native';
+
+/**
+ * Helper to render text with basic markdown (*italics*, **bold**)
+ */
+const renderMarkdown = (text, style) => {
+    const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+    return parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <Text key={index} style={[style, { fontWeight: 'bold' }]}>{part.slice(2, -2)}</Text>;
+        } else if (part.startsWith('*') && part.endsWith('*')) {
+            return <Text key={index} style={[style, { fontStyle: 'italic' }]}>{part.slice(1, -1)}</Text>;
+        }
+        return <Text key={index} style={style}>{part}</Text>;
+    });
+};
+
 const MessageBubble = ({ item, theme }) => {
     const isUser = item.sender === 'user';
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -31,27 +49,42 @@ const MessageBubble = ({ item, theme }) => {
         ]).start();
     }, []);
 
+    const handleLongPress = async () => {
+        await Clipboard.setStringAsync(item.text);
+        // Optional: Show a toast or small alert
+        Alert.alert('Copied', 'Message copied to clipboard');
+    };
+
     return (
         <Animated.View style={[
             styles.messageBubbleContainer,
             isUser ? styles.userBubbleContainer : styles.botBubbleContainer,
             { opacity: fadeAnim, transform: [{ translateY }] }
         ]}>
-            <View style={[
-                styles.messageBubble,
-                isUser ?
-                    [styles.userBubble, { backgroundColor: theme.colors.primary }] :
-                    [styles.botBubble, { backgroundColor: theme.colors.white }],
-                item.data?.isVerse && styles.verseBubble // Apply verse styling
-            ]}>
+            <TouchableOpacity
+                onLongPress={handleLongPress}
+                activeOpacity={0.8}
+                style={[
+                    styles.messageBubble,
+                    isUser ?
+                        [styles.userBubble, { backgroundColor: theme.colors.primary }] :
+                        [styles.botBubble, { backgroundColor: theme.colors.white }],
+                    item.data?.isVerse && styles.verseBubble // Apply verse styling
+                ]}
+            >
                 <Text style={[
                     styles.messageText,
                     isUser ? { color: theme.colors.white } : { color: theme.colors.black },
                     item.data?.isVerse && styles.verseText // Apply verse text styling
                 ]}>
-                    {item.text}
+                    {renderMarkdown(item.text, {
+                        color: isUser ? theme.colors.white : theme.colors.black,
+                        fontSize: typography.sizes.body,
+                        lineHeight: 22,
+                        ...((item.data?.isVerse) ? styles.verseText : {})
+                    })}
                 </Text>
-            </View>
+            </TouchableOpacity>
         </Animated.View>
     );
 };

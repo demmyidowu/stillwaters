@@ -20,10 +20,22 @@ const DevotionalScreen = ({ navigation }) => {
         fetchTodayDevotional();
     }, []);
 
-    if (isLoading || !todayDevotional) {
+    if (isLoading) {
         return (
             <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+        );
+    }
+
+    if (!todayDevotional) {
+        return (
+            <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background, padding: 20 }]}>
+                <Icon name="water-outline" type="ionicon" size={64} color={theme.colors.grey2} />
+                <Text h4 style={{ color: theme.colors.grey1, marginTop: 16, textAlign: 'center' }}>No Stream for Today</Text>
+                <Text style={{ color: theme.colors.grey2, marginTop: 8, textAlign: 'center' }}>
+                    Check back tomorrow for a new reflection.
+                </Text>
             </View>
         );
     }

@@ -78,10 +78,12 @@ const useChatStore = create((set, get) => ({
                     text: message.text,
                     metadata: message.data || null, // Store extra data (e.g., scripture references)
                 }]);
+                return chatId;
             }
         } catch (error) {
             console.error('Error logging message:', error);
         }
+        return null;
     },
 
     /**
@@ -109,7 +111,7 @@ const useChatStore = create((set, get) => ({
         };
 
         // 1. Optimistically add user message
-        get().addMessage(userMessage);
+        await get().addMessage(userMessage);
         set({ isLoading: true });
 
         try {
@@ -127,7 +129,7 @@ const useChatStore = create((set, get) => ({
             };
 
             // 4. Add bot message
-            get().addMessage(botMessage);
+            await get().addMessage(botMessage);
 
             // 5. Create separate message for the verse
             let scripture = null;
@@ -139,14 +141,15 @@ const useChatStore = create((set, get) => ({
             }
 
             if (scripture) {
+                const translationText = scripture.translation ? ` (${scripture.translation})` : '';
                 const verseMessage = {
                     id: (Date.now() + 2).toString(),
-                    text: `"${scripture.text}"\n\n— ${scripture.reference} (${scripture.translation || ''})`,
+                    text: `"${scripture.text}"\n\n— ${scripture.reference}${translationText}`,
                     sender: 'bot',
                     timestamp: new Date(Date.now() + 100), // Slight delay
                     data: { isVerse: true } // Mark as verse for potential styling
                 };
-                get().addMessage(verseMessage);
+                await get().addMessage(verseMessage);
             }
 
             // 6. Auto-generate title if needed
@@ -158,7 +161,8 @@ const useChatStore = create((set, get) => ({
 
                 // If conversation is "New Conversation" (default), update it
                 if (conversation && conversation.summary === 'New Conversation') {
-                    const newTitle = text.length > 30 ? text.substring(0, 30) + '...' : text;
+                    // Use AI title if available, otherwise fallback to truncated text
+                    const newTitle = response.title || (text.length > 30 ? text.substring(0, 30) + '...' : text);
 
                     // Update in Supabase
                     await supabase

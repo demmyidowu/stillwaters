@@ -48,10 +48,12 @@ const SettingsScreen = ({ navigation }) => {
                 <View style={styles.avatarContainer}>
                     <Icon name="person" type="ionicon" size={40} color={colors.white} />
                 </View>
-                <Text h4 style={[styles.name, { color: theme.colors.black }]}>{user?.name || 'User'}</Text>
+                <Text h4 style={[styles.name, { color: theme.colors.black }]}>
+                    {user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Friend'}
+                </Text>
                 <Text style={styles.email}>{user?.email || 'email@example.com'}</Text>
                 <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{user?.tier || 'Free'} Plan</Text>
+                    <Text style={styles.badgeText}>Child of God</Text>
                 </View>
             </View>
 
@@ -67,18 +69,6 @@ const SettingsScreen = ({ navigation }) => {
                     <Switch
                         value={settings.notifications}
                         onValueChange={toggleNotifications}
-                        trackColor={{ true: colors.primary.blue }}
-                    />
-                </ListItem>
-
-                <ListItem bottomDivider containerStyle={{ backgroundColor: theme.colors.white }}>
-                    <Icon name="moon-outline" type="ionicon" color={colors.primary.blue} />
-                    <ListItem.Content>
-                        <ListItem.Title style={{ color: theme.colors.black }}>Dark Mode</ListItem.Title>
-                    </ListItem.Content>
-                    <Switch
-                        value={settings.darkMode}
-                        onValueChange={handleToggleDarkMode}
                         trackColor={{ true: colors.primary.blue }}
                     />
                 </ListItem>

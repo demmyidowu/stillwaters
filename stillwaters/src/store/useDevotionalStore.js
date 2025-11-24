@@ -21,21 +21,25 @@ const useDevotionalStore = create((set) => ({
     fetchTodayDevotional: async () => {
         set({ isLoading: true, error: null });
         try {
-            const today = new Date().toISOString().split('T')[0];
+            // Use local date string to match the user's day
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const today = `${year}-${month}-${day}`;
 
+            console.log('Fetching devotional for date:', today);
+
+            // Call the RPC function to get or assign a devotional for today
             const { data, error } = await supabase
-                .from('devotionals')
-                .select('*')
-                .eq('date', today)
-                .single();
+                .rpc('get_daily_stream', { target_date: today });
 
-            if (error) {
-                if (error.code === 'PGRST116') {
-                    // No devotional found for today (PGRST116 is the code for 0 rows from .single())
-                    set({ todayDevotional: null });
-                    return;
-                }
-                throw error;
+            if (error) throw error;
+
+            if (!data) {
+                // If RPC returns null, it means the library is empty or something went wrong
+                set({ todayDevotional: null });
+                return;
             }
 
             // Format the data for the UI

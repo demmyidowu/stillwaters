@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, FAB, Icon, useTheme, ListItem } from '@rneui/themed';
 import { commonStyles, colors, spacing, typography } from '../utils/theme';
 import useChatStore from '../store/useChatStore';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 /**
  * Chat List Screen
@@ -33,36 +34,53 @@ const ChatListScreen = ({ navigation }) => {
         deleteConversation(conversationId);
     };
 
-    const renderItem = ({ item }) => (
-        <ListItem.Swipeable
-            containerStyle={{ backgroundColor: theme.colors.white }}
-            onPress={() => handleSelectChat(item.id)}
-            bottomDivider
-            rightContent={
-                <TouchableOpacity
-                    style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        backgroundColor: theme.colors.error,
-                    }}
-                    onPress={() => handleDeleteChat(item.id)}
-                >
+    const renderRightActions = (progress, dragX, itemId) => {
+        const trans = dragX.interpolate({
+            inputRange: [-100, 0],
+            outputRange: [1, 0],
+            extrapolate: 'clamp',
+        });
+
+        return (
+            <TouchableOpacity
+                style={{
+                    backgroundColor: theme.colors.error,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    width: 80,
+                    height: '100%',
+                }}
+                onPress={() => handleDeleteChat(itemId)}
+            >
+                <Animated.View style={{ transform: [{ scale: trans }] }}>
                     <Icon name="trash-outline" type="ionicon" color="white" />
-                </TouchableOpacity>
-            }
+                </Animated.View>
+            </TouchableOpacity>
+        );
+    };
+
+    const renderItem = ({ item }) => (
+        <Swipeable
+            renderRightActions={(progress, dragX) => renderRightActions(progress, dragX, item.id)}
+            containerStyle={{ backgroundColor: theme.colors.white }}
         >
-            <Icon name="chatbubble-ellipses-outline" type="ionicon" color={theme.colors.primary} key="icon" />
-            <ListItem.Content key="content">
-                <ListItem.Title style={{ color: theme.colors.black, fontWeight: typography.weights.bold }}>
-                    {item.summary || 'New Conversation'}
-                </ListItem.Title>
-                <ListItem.Subtitle style={{ color: theme.colors.grey1, fontSize: typography.sizes.small }}>
-                    {new Date(item.created_at).toLocaleDateString()}
-                </ListItem.Subtitle>
-            </ListItem.Content>
-            <ListItem.Chevron color={theme.colors.grey1} key="chevron" />
-        </ListItem.Swipeable>
+            <ListItem
+                containerStyle={{ backgroundColor: theme.colors.white }}
+                onPress={() => handleSelectChat(item.id)}
+                bottomDivider
+            >
+                <Icon name="chatbubble-ellipses-outline" type="ionicon" color={theme.colors.primary} />
+                <ListItem.Content>
+                    <ListItem.Title style={{ color: theme.colors.black, fontWeight: typography.weights.bold }}>
+                        {item.summary || 'New Conversation'}
+                    </ListItem.Title>
+                    <ListItem.Subtitle style={{ color: theme.colors.grey1, fontSize: typography.sizes.small }}>
+                        {new Date(item.created_at).toLocaleDateString()}
+                    </ListItem.Subtitle>
+                </ListItem.Content>
+                <ListItem.Chevron color={theme.colors.grey1} />
+            </ListItem>
+        </Swipeable>
     );
 
     return (
